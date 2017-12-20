@@ -9,16 +9,6 @@ The goals / steps of this project are the following:
 * Run your pipeline on a video stream (start with the test_video.mp4 and later implement on full project_video.mp4) and create a heat map of recurring detections frame by frame to reject outliers and follow detected vehicles.
 * Estimate a bounding box for vehicles detected.
 
-[//]: # (Image References)
-[image1]: ./examples/car_not_car.png
-[image2]: ./examples/HOG_example.jpg
-[image3]: ./examples/sliding_windows.jpg
-[image4]: ./examples/sliding_window.jpg
-[image5]: ./examples/bboxes_and_heat.png
-[image6]: ./examples/labels_map.png
-[image7]: ./examples/output_bboxes.png
-[video1]: ./project_video.mp4
-
 ## [Rubric](https://review.udacity.com/#!/rubrics/513/view) Points
 ### Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
 
@@ -47,7 +37,7 @@ HOG features with YUV color channel<br/><br/>
 
 #### 2. Explain how you settled on your final choice of HOG parameters.
 
-I decided the color space and these parameters reffering to [this GitHub repository](https://github.com/jeremy-shannon/CarND-Vehicle-Detection). However I changed the `orientations` from `11` to `12` in order to make it straightforward to devide from 360 degree.
+I decided the color space and these parameters reffering to [this GitHub repository](https://github.com/jeremy-shannon/CarND-Vehicle-Detection). However I changed the `orientations` from `11` to `12` in order to make it straightforward to devide from 360 [degree].
 
 #### 3. Describe how (and identify where in your code) you trained a classifier using your selected HOG features and color features if you used them.
 
@@ -76,40 +66,42 @@ The test accuray of the SVC was `0.9947`, which is pretty high.
 
 #### 1. Describe how (and identify where in your code) you implemented a sliding window search.  How did you decide what scales to search and how much to overlap windows?
 
-I decided to search random window positions at random scales all over the image and came up with this (ok just kidding I didn't actually ;):
+I decided to search multiple scale windows under 400 [pixel] to detect both near and far cars using a function named `find_cars()` at the 5th code cell (In [5]:) of `P5.ipynb`.
 
-![alt text][image3]
+<div style="text-align:center"><br/>
+<img src="./output_images/multiple_scale_windows.png"><br/>
+Multiple Scale Windows<br/><br/>
+</div>
 
-#### 2. Show some examples of test images to demonstrate how your pipeline is working.  What did you do to optimize the performance of your classifier?
+After playing with parameters, I found out that small cars near the horizontal line of the picture, which mean the cars are far from own vehicle, were hard to be detected. So I added the value `1.33`(green window) and `1.66`(dark blue window) into the `scales` array.
 
-Ultimately I searched on two scales using YCrCb 3-channel HOG features plus spatially binned color and histograms of color in the feature vector, which provided a nice result.  Here are some example images:
+#### 2. Show some examples of test images to demonstrate how your pipeline is working.
 
-![alt text][image4]
+The detected result is like below. The bigger `scale` becomes, the less detected windows are, which is proper trend.
+
+<div style="text-align:center"><br/>
+<img src="./output_images/sliding_window_search.png"><br/>
+Sliding Window Search<br/><br/>
+</div>
+
 ---
 
 ### Video Implementation
 
 #### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (somewhat wobbly or unstable bounding boxes are ok as long as you are identifying the vehicles most of the time with minimal false positives.)
-Here's a [link to my video result](./project_video.mp4)
 
+Here's a [link to my video result](./output_videos/project_video_output.mp4)
 
 #### 2. Describe how (and identify where in your code) you implemented some kind of filter for false positives and some method for combining overlapping bounding boxes.
 
-I recorded the positions of positive detections in each frame of the video.  From the positive detections I created a heatmap and then thresholded that map to identify vehicle positions.  I then used `scipy.ndimage.measurements.label()` to identify individual blobs in the heatmap.  I then assumed each blob corresponded to a vehicle.  I constructed bounding boxes to cover the area of each blob detected.  
+To get rid of false detection, the program would create a `heatmap` based on the number of detected windows and apply a `threshold` at the 9th code cell (In [18]:) of `P5.ipynb`. Then the program would draw boundary boxes using `scipy.ndimage.measurements.label()` with the `heatmap`. The result of this section is like this:
 
-Here's an example result showing the heatmap from a series of frames of video, the result of `scipy.ndimage.measurements.label()` and the bounding boxes then overlaid on the last frame of video:
+<div style="text-align:center"><br/>
+<img src="./output_images/heatmap_threshold.png"><br/>
+Create a heatmap and apply a thereshold<br/><br/>
+</div>
 
-### Here are six frames and their corresponding heatmaps:
-
-![alt text][image5]
-
-### Here is the output of `scipy.ndimage.measurements.label()` on the integrated heatmap from all six frames:
-![alt text][image6]
-
-### Here the resulting bounding boxes are drawn onto the last frame in the series:
-![alt text][image7]
-
-
+To take advantages of video and make more robust detection, I created a class object called `Cars()` at the 10th code cell (In [19]:) of `P5.ipynb` and stored an average heatmap over the last 15 [frame] of the video. I also overwrote the function named `createHeatmap()` to use the average heatmap stored in the `Cars()` class at the 11th code cell (In [20]:) of `P5.ipynb`. By using these new features for video pipline and tuning several parameters, the program detected cars smoothly and removed more false detections.
 
 ---
 
@@ -117,4 +109,4 @@ Here's an example result showing the heatmap from a series of frames of video, t
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+The program took average of the `heatmap` after sliding windows, so if cars drove too fast, the value of the `heatmap` would be less than the `threshold` and the program wouldn't detect the fast cars (the program would recognize these cars as false detection). It depends on the value of `threshold` and the number of flames to take average, and these parameters need to be hyper tuned to behave properly in all possible cases. 
